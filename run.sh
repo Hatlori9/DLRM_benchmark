@@ -5,7 +5,7 @@
 BENCH_PID=$!
 
 # Run dense.py in the background and get its process ID
-python dense.py &
+python dense.py 1 1000 &
 DENSE_PID=$!
 
 # Wait for either process to complete
