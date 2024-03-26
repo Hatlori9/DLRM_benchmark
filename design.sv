@@ -1,3 +1,5 @@
+
+
 `include "AccumulateConfigLogic.v"
 module ProcessCore(
     input clk,
@@ -27,11 +29,34 @@ reg [3:0] opcode;
 reg [43:0] address_field;
 reg [15:0] data_field;
 reg buffer_ready_flag; // A flag to indicate buffer readiness
-
+  
 // Internal Registers
 reg [63:0] swap_reg;
 reg [63:0] instruction_ingress_registry;
 reg [63:0] functional_config_register;
+  
+  
+// Define 16 sets of Sum components
+reg [31:0] SumAddress[0:15];
+reg SumTag[0:15];
+reg [31:0] SumCandidateCounter[0:15];
+reg [63:0] SumValue[0:15];
+reg [127:0] IngressBuffer [0:128];
+  
+  
+integer i;
+initial begin
+    for (i = 0; i < 16; i = i + 1) begin
+        SumAddress[i] = 32'h5000BF + i; // Example starting addresses
+        SumTag[i] = 1'b1; // Initialize tags as '1'
+        SumCandidateCounter[i] = 0; // Initialize counters
+        SumValue[i] = 0; // Initialize values
+    end
+  for (i = 0; i < 128; i = i + 1) begin
+        IngressBuffer[i] = 0; // Initialize values
+    end
+end
+
 
 // Control signals
 wire bp_from_accumulate_logic;
@@ -46,6 +71,28 @@ AccumulateConfigLogic accumulateConfigLogic(
     .bp_signal(bp_from_accumulate_logic)
 );
 
+  
+  
+  
+always @(posedge clk or posedge reset) begin
+    if (reset) begin
+        for (i = 0; i < 16; i = i + 1) begin
+            SumCandidateCounter[i] <= 0;
+            SumValue[i] <= 0;
+        end
+        for (i = 0; i < 128; i = i + 1) begin
+            IngressBuffer[i] <= 0;
+        end
+    end else begin
+        if (accumulate_enable) begin
+            SumValue[data_field[3:0]] <= SumValue[data_field[3:0]] + from_accumulate_logic;
+            SumCandidateCounter[data_field[3:0]] <= SumCandidateCounter[data_field[3:0]] + 1;
+        end
+    end
+end
+  
+  
+  
 // Process Core Logic
 always @(posedge clk or posedge reset) begin
     if (reset) begin
